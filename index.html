@@ -1,0 +1,218 @@
+<html>
+  <head>
+    <title>GPS Loc</title>
+<style>   
+      #mapCanvas {
+      width: 100%;
+      height: 100%;
+      }
+</style>
+  </head>
+  <body>
+<p id="dataP">Initializing page ,.</p>
+   <div id="mapCanvas"></div>
+  </body>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAa3C8f9M9auhiO8LQIRHGh5oG1tFTSG2M"></script>
+<script>
+var ret_data;
+var gpsData;
+setInterval(function() {dat_req()}, 2000);
+
+function dat_req() {
+    const socket = new WebSocket('ws://10.8.0.45:8000');
+    socket.addEventListener('open', function (event) {
+      socket.send('1'); 
+    });
+    socket.addEventListener('message', function (event) {
+      ret_data = event.data;
+      gpsData = JSON.parse(ret_data);
+     });
+     try { 
+      Lat1 = Number(gpsData.lat.substring(0, gpsData.lat.indexOf(".")-2));
+      Lat2 = Number(gpsData.lat.substring(gpsData.lat.indexOf(".")-2))/60;
+      Lon1 = Number(gpsData.long.substring(0, gpsData.long.indexOf(".")-2));
+      Lon2 = Number(gpsData.long.substring(gpsData.long.indexOf(".")-2))/60;
+      DLat = Lat1 + Lat2;
+      DLon = Lon1 + Lon2;
+      if(gpsData.laI ==  "S"){
+        DLat = -1*DLat;
+      }
+      if(gpsData.loI ==  "W"){
+        DLon = -1*DLon;
+      }
+      DGPS = DLat.toFixed(6).toString() + "," + DLon.toFixed(6).toString();
+      console.log(DGPS);
+      MVMK(Number(DLat.toFixed(6)), Number(DLon.toFixed(6)));
+//      return "type: " + gpsData.type + "<br>" 
+//      + "time: " + gpsData.time + "<br>" 
+//      + "lat: " + gpsData.lat + " " + gpsData.laI + "<br>" 
+//      + "long: " + gpsData.long + " " + gpsData.loI + "<br>"
+//      + "QI: " + gpsData.QI + "<br>"
+//      + "sats: " + gpsData.sats + "<br>"
+//      + "HDOP: " + gpsData.HDOP + "<br>"
+//      + "Alt: " + gpsData.ALT + " " + gpsData.Au + "<br>"
+//      + "GeoSep: " + gpsData.GeoSep + " " + gpsData.GSU + "<br>"
+//      + "D GPS: "+ DGPS;
+//      + "AOC: " + gpsData.AOC + "<br>"
+//      + "CS: " + gpsData.CS + "<br>"
+//      + "Cks: " + gpsData.Cks;
+     }
+     catch(err){
+       console.log(err);
+     }
+    }
+// ---------------------------------------------------------------------------------------- MAPS
+var map;
+var marker;
+var markers;
+function initMap() {
+    //var map;
+    var bounds = new google.maps.LatLngBounds();
+    var mapOptions = {
+        mapTypeId: 'satellite'
+    };
+                    
+    // Display a map on the web page
+    map = new google.maps.Map(document.getElementById("mapCanvas"), mapOptions);
+    map.setTilt(50);
+        
+    // Multiple markers location, latitude, and longitude
+    markers = [
+        ['SSPDAR1', 51.048010, -0.991565],
+        ['SSPDAR2', 51.044915, -0.993976],
+        ['SSPDAR3', 51.044355, -0.991158],
+        ['SSPDAR5', 51.050167, -0.989498]
+    ];
+                        
+    // Info window content
+    var infoWindowContent = [
+        ['<div class="info_content">' +
+        '<h3>SSPDAR1</h3>' +
+        '<p>Passive RF sensor 1.</p>' +
+        '</div>'],
+        ['<div class="info_content">' +
+        '<h3>SSPDAR2</h3>' +
+        '<p>Passive RF sensor 2.</p>' +
+        '</div>'],
+        ['<div class="info_content">' +
+        '<h3>SSPDAR3</h3>' +
+        '<p>Passive RF sensor 3.</p>' +
+        '</div>'],
+        ['<div class="info_content">' +
+        '<h3>SSPDAR5</h3>' +
+        '<p>Passive RF sensor 5.</p>' +
+        '</div>']
+    ];
+        
+    // Add multiple markers to map
+    var infoWindow = new google.maps.InfoWindow(), marker, i;
+    
+    // Place each marker on the map  
+    for( i = 0; i < markers.length; i++ ) {
+        var position = new google.maps.LatLng(markers[i][1], markers[i][2]);
+        bounds.extend(position);
+        marker = new google.maps.Marker({
+            position: position,
+            map: map,
+            title: markers[i][0]
+        });
+        
+        // Add info window to marker    
+        google.maps.event.addListener(marker, 'click', (function(marker, i) {
+            return function() {
+                infoWindow.setContent(infoWindowContent[i][0]);
+                infoWindow.open(map, marker);
+            }
+        })(marker, i));
+
+        // Center the map to fit all markers on the screen
+        map.fitBounds(bounds);
+    }
+
+    // Set zoom level
+    var boundsListener = google.maps.event.addListener((map), 'bounds_changed', function(event) {
+        this.setZoom(17);
+        google.maps.event.removeListener(boundsListener);
+    });
+    addMK();
+}
+// Load initialize function
+google.maps.event.addDomListener(window, 'load', initMap);
+var markerT;
+var sspdar1L, sspdar2L, sspdar3L, sspdar4L;
+var vL = [sspdar1L, sspdar2L, sspdar3L, sspdar4L];
+var sspdar1LC, sspdar2LC, sspdar3LC, sspdar4LC;
+var vLC = [sspdar1LC, sspdar2LC, sspdar3LC, sspdar4LC];
+
+function addMK(){
+    var lat = 51.046397
+    var lon = -0.988044
+    var TargetLaLo = new google.maps.LatLng(lat, lon);
+    markerT = new google.maps.Marker({
+      position: TargetLaLo,
+      title: "target1"
+    }); 
+    markerT.setMap(map);
+    markerT.setMap(null);
+    for (let i = 0; i < 4; i++) {
+      vLC[i] = [
+       { lat: markers[i][1], lng: markers[i][2] },
+       { lat: lat, lng: lon },
+     ];
+     vL[i] = new google.maps.Polyline({
+     path: vLC[i],
+     geodesic: true,
+     strokeColor: "#FFFFFF",
+     strokeOpacity: 1.0,
+     strokeWeight: 2,
+     });
+     vL[i].setMap(map);
+     if (vL[i].setMap() !== null) {vL[i].setMap(null);}
+   }
+}
+function MVMK(lat, lon){ 
+    markerT.setMap(null);
+    var TargetLaLo = new google.maps.LatLng(lat, lon);
+    markerT = new google.maps.Marker({
+      position: TargetLaLo,
+      title: "target1"
+    }); 
+    markerT.setMap(map);
+    MKLines(lat, lon);
+ }
+
+function MKLines(lat, lon){
+  document.getElementById("dataP").innerHTML = "";
+  for (let i = 0; i < 4; i++) {
+    vL[i].setMap(null);
+    vLC[i] = [
+      { lat: markers[i][1], lng: markers[i][2] },
+      { lat: lat, lng: lon },
+    ];
+    vL[i] = new google.maps.Polyline({
+    path: vLC[i],
+    geodesic: true,
+    strokeColor: "#FFFFFF",
+    strokeOpacity: 1.0,
+    strokeWeight: 2,
+    });
+    vL[i].setMap(map);
+    var AOA = AOAc(lat, lon, i);
+    document.getElementById("dataP").innerHTML += String(markers[i][0]) + ": " + String(AOA) + ", ";
+  }
+}
+
+function AOAc(latT, lonT, i){
+    var latss = markers[i][1]
+    var lonss = markers[i][2]
+    var dL = lonT - lonss
+    var x = Math.cos(latT*Math.PI/180) * Math.sin(dL*Math.PI/180);
+    var y = Math.cos(latss*Math.PI/180) * Math.sin(latT*Math.PI/180) - Math.sin(latss*Math.PI/180) * Math.cos(latT*Math.PI/180) * Math.cos(dL*Math.PI/180)
+    var B = Math.atan2(x, y) *180 /Math.PI;
+    if(B < 0) {B = 360 - Math.abs(B);}
+    return String(B.toFixed(2));
+    console.log(B.toFixed(2));
+  //    <button onclick="MVMK(51.045878, -0.990221)">GEN</button>
+}
+</script>
+</html>
